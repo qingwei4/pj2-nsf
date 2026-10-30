@@ -63,7 +63,7 @@ func testBboltDb(t *testing.T) {
 	t.Run("Single Data Operations", testSingleDataOperations)
 	t.Run("Multiple Data Operations", testMultipleDataOperations)
 }
-
+/*
 func testCustomDb(t *testing.T) {
 	var err error
 	dbInstance, err = db.NewDb("custom") // TODO: change "custom" to the actual name of your custom DB implementation
@@ -79,7 +79,7 @@ func testCustomDb(t *testing.T) {
 	t.Run("Single Data Operations", testSingleDataOperations)
 	t.Run("Multiple Data Operations", testMultipleDataOperations)
 }
-
+*/
 func testSingleDataOperations(t *testing.T) {
 	for _, tc := range testDbCases {
 		if err := dbInstance.Save(tc.key, tc.valuse); err != nil {

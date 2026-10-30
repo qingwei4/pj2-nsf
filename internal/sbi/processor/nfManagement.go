@@ -1,8 +1,10 @@
 package processor
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
+	"nsf/internal/nsfContext"
 	"nsf/model"
 	"time"
 
@@ -15,8 +17,12 @@ func (p *Processor) ProcessServicesRegistration(request model.NnsfNfmPostRequest
 
 	if err := p.NsfContext.RegisterServices(request.NfName, request.SbiAddress, request.SbiPort, request.Services); err != nil {
 		p.NsfLogger.ProcLog.Errorf("Failed to register services: %v", err)
+		statusCode := http.StatusInternalServerError
+		if errors.Is(err, nsfContext.ErrServiceConflict) {
+			statusCode = http.StatusConflict
+		}
 		return nil, &model.HttpError{
-			StatusCode:  http.StatusInternalServerError,
+			StatusCode:  statusCode,
 			ErrorDetail: fmt.Errorf("failed to register services: %v", err),
 		}
 	}
