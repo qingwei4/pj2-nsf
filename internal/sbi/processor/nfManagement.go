@@ -51,8 +51,15 @@ func (p *Processor) ProcessServicesDeregistration(request model.NnsfNfmDeleteReq
 
 	if err := p.NsfContext.DeregisterServices(request.NfName, request.Services); err != nil {
 		p.NsfLogger.ProcLog.Errorf("Failed to deregister services: %v", err)
+		statusCode := http.StatusInternalServerError
+		switch {
+		case errors.Is(err, nsfContext.ErrServiceNotFound):
+			statusCode = http.StatusNotFound
+		case errors.Is(err, nsfContext.ErrServiceForbidden):
+			statusCode = http.StatusForbidden
+		}
 		return &model.HttpError{
-			StatusCode:  http.StatusInternalServerError,
+			StatusCode:  statusCode,
 			ErrorDetail: fmt.Errorf("failed to deregister services: %v", err),
 		}
 	}
