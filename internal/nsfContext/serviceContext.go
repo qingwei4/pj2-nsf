@@ -105,7 +105,7 @@ func (s *serviceContext) registerServices(nfName, sbiAddr string, sbiPort int, s
 }
 
 // loadServiceInfo reads a service from db. The bool is false if the service
-// is not registered. The caller must hold s.mu.
+// is not registered. The caller must hold s.mu (read or write lock).
 func (s *serviceContext) loadServiceInfo(service string) (serviceInfo, bool, error) {
 	var info serviceInfo
 
@@ -163,11 +163,21 @@ func (s *serviceContext) deregisterServices(nfName string, services []string) er
 	return nil
 }
 
-// TODO: Finish the implementation of the discoverService method with these return values:
-// (string, string, int, error) representing the NF name, SBI address, SBI port, and an error if any
+// discoverService returns the NF name, SBI address and SBI port of a service.
+// It returns ErrServiceNotFound if the service is not registered.
 func (s *serviceContext) discoverService(service string) (string, string, int, error) {
 	s.NsfLogger.SvcLog.Tracef("Discovering service %s", service)
 
-	s.NsfLogger.SvcLog.Warnln("discoverService: not implemented yet")
-	return "", "", 0, fmt.Errorf("discoverService: not implemented yet")
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	info, exist, err := s.loadServiceInfo(service)
+	if err != nil {
+		return "", "", 0, err
+	}
+	if !exist {
+		return "", "", 0, fmt.Errorf("%w: service %s", ErrServiceNotFound, service)
+	}
+
+	return info.NfName, info.SbiAddr, info.SbiPort, nil
 }

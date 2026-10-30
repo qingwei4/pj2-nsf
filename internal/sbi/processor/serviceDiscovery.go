@@ -46,6 +46,14 @@ func (p *Processor) ProcessDiscoveryServices(request model.NnsfDiscGroupGetReque
 		})
 	}
 
+	if len(services) == 0 {
+		p.NsfLogger.ProcLog.Errorf("Failed to discover any service in %v", request.Services)
+		return nil, &model.HttpError{
+			StatusCode:  http.StatusNotFound,
+			ErrorDetail: fmt.Errorf("failed to discover any service in %v", request.Services),
+		}
+	}
+
 	p.NsfLogger.ProcLog.Debugln("Discovery services processed successfully")
 	return &model.NnsfDiscGroupGetResponse{
 		Services: services,
