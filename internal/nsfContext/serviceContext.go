@@ -74,22 +74,12 @@ func (s *serviceContext) registerServices(nfName, sbiAddr string, sbiPort int, s
 	// Check all services before writing, so a conflict leaves the db unchanged.
 	data := make(map[string]string, len(services))
 	for _, service := range services {
-		exist, err := s.DbIf.Exist(service)
+		info, exist, err := s.loadServiceInfo(service)
 		if err != nil {
-			return fmt.Errorf("failed to check service %s: %w", service, err)
+			return err
 		}
 
 		if exist {
-			stored, err := s.DbIf.Load(service)
-			if err != nil {
-				return fmt.Errorf("failed to load service %s: %w", service, err)
-			}
-
-			var info serviceInfo
-			if err := json.Unmarshal([]byte(stored), &info); err != nil {
-				return fmt.Errorf("failed to unmarshal service %s: %w", service, err)
-			}
-
 			if info.NfName != nfName {
 				return fmt.Errorf("%w: service %s is owned by %s", ErrServiceConflict, service, info.NfName)
 			}
@@ -106,6 +96,31 @@ func (s *serviceContext) registerServices(nfName, sbiAddr string, sbiPort int, s
 
 	s.NsfLogger.SvcLog.Debugf("Registered %d services for %s", len(data), nfName)
 	return nil
+}
+
+// loadServiceInfo reads a service from db. The bool is false if the service
+// is not registered. The caller must hold s.mu.
+func (s *serviceContext) loadServiceInfo(service string) (serviceInfo, bool, error) {
+	var info serviceInfo
+
+	exist, err := s.DbIf.Exist(service)
+	if err != nil {
+		return info, false, fmt.Errorf("failed to check service %s: %w", service, err)
+	}
+	if !exist {
+		return info, false, nil
+	}
+
+	stored, err := s.DbIf.Load(service)
+	if err != nil {
+		return info, false, fmt.Errorf("failed to load service %s: %w", service, err)
+	}
+
+	if err := json.Unmarshal([]byte(stored), &info); err != nil {
+		return info, false, fmt.Errorf("failed to unmarshal service %s: %w", service, err)
+	}
+
+	return info, true, nil
 }
 
 // TODO: Finish the implementation of the deregisterServices method with an error return type
